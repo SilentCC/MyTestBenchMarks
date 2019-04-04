@@ -1,0 +1,11 @@
+/Users/xiaokang/Projects/QuickSortBenchMarks/QuickSortBenchMarks/obj/Debug/netcoreapp2.2/QuickSortBenchMarks.csproj.CoreCompileInputs.cache
+/Users/xiaokang/Projects/QuickSortBenchMarks/QuickSortBenchMarks/obj/Debug/netcoreapp2.2/QuickSortBenchMarks.AssemblyInfoInputs.cache
+/Users/xiaokang/Projects/QuickSortBenchMarks/QuickSortBenchMarks/obj/Debug/netcoreapp2.2/QuickSortBenchMarks.AssemblyInfo.cs
+/Users/xiaokang/Projects/QuickSortBenchMarks/QuickSortBenchMarks/bin/Debug/netcoreapp2.2/QuickSortBenchMarks.deps.json
+/Users/xiaokang/Projects/QuickSortBenchMarks/QuickSortBenchMarks/bin/Debug/netcoreapp2.2/QuickSortBenchMarks.runtimeconfig.json
+/Users/xiaokang/Projects/QuickSortBenchMarks/QuickSortBenchMarks/bin/Debug/netcoreapp2.2/QuickSortBenchMarks.runtimeconfig.dev.json
+/Users/xiaokang/Projects/QuickSortBenchMarks/QuickSortBenchMarks/bin/Debug/netcoreapp2.2/QuickSortBenchMarks.dll
+/Users/xiaokang/Projects/QuickSortBenchMarks/QuickSortBenchMarks/bin/Debug/netcoreapp2.2/QuickSortBenchMarks.pdb
+/Users/xiaokang/Projects/QuickSortBenchMarks/QuickSortBenchMarks/obj/Debug/netcoreapp2.2/QuickSortBenchMarks.dll
+/Users/xiaokang/Projects/QuickSortBenchMarks/QuickSortBenchMarks/obj/Debug/netcoreapp2.2/QuickSortBenchMarks.pdb
+/Users/xiaokang/Projects/QuickSortBenchMarks/QuickSortBenchMarks/obj/Debug/netcoreapp2.2/QuickSortBenchMarks.csprojAssemblyReference.cache

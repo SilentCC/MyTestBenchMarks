@@ -1,0 +1,119 @@
+﻿<p><strong>前言：</strong>目前自己在做使用Lucene.net和PanGu分词实现全文检索的工作，不过自己是把别人做好的项目进行迁移。因为项目整体要迁移到ASP.NET Core 2.0版本,而Lucene使用的版本是3.6.0 ，PanGu分词也是对应Lucene3.6.0版本的。不过好在Lucene.net 已经有了Core 2.0版本（4.8.0 bate版），而PanGu分词，目前有人正在做，貌似已经做完，只是还没有测试~，Lucene升级的改变我都会加粗表示。</p>
+<p>Lucene.net 4.8.0&nbsp; &nbsp;</p>
+<p><a href="https://github.com/apache/lucenenet" target="_blank">https://github.com/apache/lucenenet</a></p>
+<p>PanGu分词(可以直接使用的)</p>
+<p><a href="https://github.com/LonghronShen/Lucene.Net.Analysis.PanGu/tree/netcore2.0" target="_blank">https://github.com/SilentCC/Lucene.Net.Analysis.PanGu</a></p>
+<p>&nbsp;JIEba分词(可以直接使用的)</p>
+<p><a href="https://github.com/SilentCC/JIEba-netcore2.0" target="_blank">https://github.com/SilentCC/JIEba-netcore2.0</a></p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>Lucene.net 4.8.0 和之前的Lucene.net 3.6.0 改动还是相当多的，这里对自己开发过程遇到的问题，做一个记录吧，希望可以帮到和我一样需要升级Lucene.net的人。我也是第一次接触Lucene ,也希望可以帮助初学Lucene的同学。</p>
+<p>&nbsp;</p>
+<h2>一，Lucene 创建索引：IndexWriter</h2>
+<h3>1.IndexWriter的介绍</h3>
+<p>IndexWriter 是用来创建和维护索引的。<strong>IndexWriter的创建：在Lucene4.8.0中，创建IndexWriter对象，需要用到IndexWriterConfig 参数，IndexWriterConfig用来设置一些IndexWriter的属性</strong>：</p>
+<div class="cnblogs_code">
+<pre>IndexWriterConfig _indexWriterConfig = <span style="color: #0000ff;">new</span><span style="color: #000000;"> IndexWriterConfig(Lucene.Net.Util.LuceneVersion.LUCENE_48,analyze)
+IndexWriter _indexWriter </span>= <span style="color: #0000ff;">new</span> IndexWriter(dir,_indexWriterConfig)</pre>
+</div>
+<p>上面的代码创建了一个基本的IndexWriter对象，每个基本IndexWriter都必须有两个必要的属性：1.操作的索引目录 dir ;2. 分词器 analyze .这里要注意，IndexWriter的分词器和IndexSearch的分词器应该是相同的，否则将会影响搜索结果。</p>
+<p>我们通过IndexWriterConfig 可以设置IndexWriter的属性，已达到我们希望构建索引的需求，这里举一些属性，这些属性可以影响到IndexWriter写入索引的速度：</p>
+<div class="cnblogs_code">
+<pre>IndexWriterConfig.setRAMBufferSizeMB(<span style="color: #0000ff;">double</span><span style="color: #000000;">);
+IndexWriterConfig.setMaxBufferedDocs(</span><span style="color: #0000ff;">int</span><span style="color: #000000;">);
+IndexWriterConfig.setMergePolicy(MergePolicy)</span></pre>
+</div>
+<p>setRAMBufferSizeMB()&nbsp;是设置，当IndexWriter添加的文档的大小超过RAMBufferSizeMB ，IndexWriter就会把在内存中的操作，写入到硬盘中。具体一点：IndexWriter在执行AddDocuments(写入文档),DeleteDocuments（删除文档），UpdateDocuments(更新文档)，这些操作的时候，这些操作都会先缓冲到内存中，也就是说执行完这些函数，其实储存的索引目录下是没有任何改变的，当AddDocuments的容量超过上述的属性的时候，这些操作才会具体执行到储存索引的硬盘当中。默认的<code><a href="https://lucene.apache.org/core/4_8_0/core/org/apache/lucene/index/IndexWriterConfig.html#DEFAULT_RAM_BUFFER_SIZE_MB">DEFAULT_RAM_BUFFER_SIZE_MB</a>&nbsp;是16MB.</code></p>
+<p>&nbsp;</p>
+<p>setMaxBufferedDocs() 是设置，当IndexWriter添加的文档数量超过MaxBufferedDocs的时候，IndexWriter就会把内存中写入的文档，写到硬盘中，并生成一个新的索引文件segment。关于Lucene的索引结构会在下面说到。</p>
+<p>&nbsp;</p>
+<p>setMergePolicy 是设置索引合并的策略，MergePolicy中有一个参数DEFAULT_MAX_CFS_SEGMENT_SIZE 表示索引中最多有多少个segment文件。&nbsp;</p>
+<h4>1.1 提高索引的速度&nbsp;<code></code></h4>
+<p>上面提到了三个IndexWriterConfig的三个属性。我们知道，IndexWriter是当缓存中的容量达到一定的限制条件之后，才开始将缓存中的操作写入到硬盘中，事实上，如果我们把限制条件定的值越大，索引的速度是越快的。显而易见，如果设置RAMBufferSizeMB和MAXBufferedDocu越大，IndexWriter 写入硬盘的次数就越少，而写索引的时间耗费大多在对硬盘的操作之上。</p>
+<p>IndexWriter写入索引之后，在索引目录里会有很多segment文件。segment文件数量达到<strong>MergeFactor (设置合并因子)</strong>的时候，IndexWriter会将这些segment文件合并，形成一个新的segment文件，类似于压缩。而在索引目录中，如果segment文件越多，则搜索的速度会降低，segement文件越少，搜索的速度也就越快。所以当我们设置MergeFactor的值越大的时候，搜索的速度就会越快，而合并segement的速度则会降低，也即索引的速度会降低。</p>
+<p>&nbsp;</p>
+<h3>2. 索引文件的结构</h3>
+<p><img src="http://images2017.cnblogs.com/blog/948150/201801/948150-20180107164224549-619474334.png" alt="" /></p>
+<p>这是，一个索引目录下的索引文件。结构是这样的：</p>
+<h4>　　（索引）Index &nbsp;</h4>
+<h4>　　　　　---（段）Segment &nbsp;</h4>
+<h4>　　　　　　　---（文档）Document</h4>
+<h4>　　　　　　　　　 --- （域）Field</h4>
+<h4>　　　　　　　　　　　　--- （词）Term</h4>
+<p>上面的图片中，只有一个段，_v6.fdt ;_v6.fdx ....... 都属于_v6 segment中的内容。而segments_5u 和segments.gen 是段的元数据文件，也即它们保存了段的属性信息。</p>
+<ul>
+<li>XXX.fnm保存了此段包含了多少个域，每个域的名称及索引方式。</li>
+<li>XXX.fdx，XXX.fdt保存了此段包含的所有文档，每篇文档包含了多少域，每个域保存了那些信息。</li>
+<li>XXX.tvx，XXX.tvd，XXX.tvf保存了此段包含多少文档，每篇文档包含了多少域，每个域包含了多少词，每个词的字符串，位置等信息。</li>
+</ul>
+<p>上面的是正向信息，还有反向信息就不详细说了。</p>
+<p>&nbsp;</p>
+<h3>3.IndexWriter的优化　　</h3>
+<p><strong>在Lucene中IndexWriter.Optimize 用来优化索引，而在Lucene4.8.0中Optimize 已经更名为ForceMerge，为的是少让你使用。</strong>IndexWriter的优化实际上就是把Segment文件进行合并，你可以输入参数，ForceMerge(segments) 表示，合并到索引目录里最多有segments个段文件。而当参数越小的时候，也即合并的文件越多的时候，消耗的时间和空间就越大。很显然，合并是为了让我们的搜索速度变的更快。</p>
+<p>在优化的过程中，需要当前索引容量两倍的空间，比如你现在的索引大小是40个G，在优化过程中，索引的大小会增加到80多个G，然后再合并直到最后只有30多个G。当你的索引更新不是特别频繁的时候，可以优化一下，如果更新特别频繁，那么调用ForceMerge就会效率很低，这个时候，我们可以设置上面提到过的MergeFactor来，让索引中segments文件少一些。</p>
+<p>&nbsp;</p>
+<h3>4.IndexWriter的注意事项</h3>
+<p>1.IndexWriter在操作一个索引的时候会创建一个锁定文件,Writer.lock 。如果有另一个IndexWriter要打开这个目录，将会报错。</p>
+<p>2.IndexWriter实例是完全线程安全的，多个线程可以同时调用它的任何方法.</p>
+<p><strong>前言：</strong>目前自己在做使用Lucene.net和PanGu分词实现全文检索的工作，不过自己是把别人做好的项目进行迁移。因为项目整体要迁移到ASP.NET Core 2.0版本,而Lucene使用的版本是3.6.0 ，PanGu分词也是对应Lucene3.6.0版本的。不过好在Lucene.net 已经有了Core 2.0版本（4.8.0 bate版），而PanGu分词，目前有人正在做，貌似已经做完，只是还没有测试~，Lucene升级的改变我都会加粗表示。</p>
+<p>Lucene.net 4.8.0&nbsp; &nbsp;</p>
+<p><a href="https://github.com/apache/lucenenet" target="_blank">https://github.com/apache/lucenenet</a></p>
+<p>PanGu分词(可以直接使用的)</p>
+<p><a href="https://github.com/LonghronShen/Lucene.Net.Analysis.PanGu/tree/netcore2.0" target="_blank">https://github.com/SilentCC/Lucene.Net.Analysis.PanGu</a></p>
+<p>&nbsp;JIEba分词(可以直接使用的)</p>
+<p><a href="https://github.com/SilentCC/JIEba-netcore2.0" target="_blank">https://github.com/SilentCC/JIEba-netcore2.0</a></p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>Lucene.net 4.8.0 和之前的Lucene.net 3.6.0 改动还是相当多的，这里对自己开发过程遇到的问题，做一个记录吧，希望可以帮到和我一样需要升级Lucene.net的人。我也是第一次接触Lucene ,也希望可以帮助初学Lucene的同学。</p>
+<p>&nbsp;</p>
+<h2>一，Lucene 创建索引：IndexWriter</h2>
+<h3>1.IndexWriter的介绍</h3>
+<p>IndexWriter 是用来创建和维护索引的。<strong>IndexWriter的创建：在Lucene4.8.0中，创建IndexWriter对象，需要用到IndexWriterConfig 参数，IndexWriterConfig用来设置一些IndexWriter的属性</strong>：</p>
+<div class="cnblogs_code">
+<pre>IndexWriterConfig _indexWriterConfig = <span style="color: #0000ff;">new</span><span style="color: #000000;"> IndexWriterConfig(Lucene.Net.Util.LuceneVersion.LUCENE_48,analyze)
+IndexWriter _indexWriter </span>= <span style="color: #0000ff;">new</span> IndexWriter(dir,_indexWriterConfig)</pre>
+</div>
+<p>上面的代码创建了一个基本的IndexWriter对象，每个基本IndexWriter都必须有两个必要的属性：1.操作的索引目录 dir ;2. 分词器 analyze .这里要注意，IndexWriter的分词器和IndexSearch的分词器应该是相同的，否则将会影响搜索结果。</p>
+<p>我们通过IndexWriterConfig 可以设置IndexWriter的属性，已达到我们希望构建索引的需求，这里举一些属性，这些属性可以影响到IndexWriter写入索引的速度：</p>
+<div class="cnblogs_code">
+<pre>IndexWriterConfig.setRAMBufferSizeMB(<span style="color: #0000ff;">double</span><span style="color: #000000;">);
+IndexWriterConfig.setMaxBufferedDocs(</span><span style="color: #0000ff;">int</span><span style="color: #000000;">);
+IndexWriterConfig.setMergePolicy(MergePolicy)</span></pre>
+</div>
+<p>setRAMBufferSizeMB()&nbsp;是设置，当IndexWriter添加的文档的大小超过RAMBufferSizeMB ，IndexWriter就会把在内存中的操作，写入到硬盘中。具体一点：IndexWriter在执行AddDocuments(写入文档),DeleteDocuments（删除文档），UpdateDocuments(更新文档)，这些操作的时候，这些操作都会先缓冲到内存中，也就是说执行完这些函数，其实储存的索引目录下是没有任何改变的，当AddDocuments的容量超过上述的属性的时候，这些操作才会具体执行到储存索引的硬盘当中。默认的<code><a href="https://lucene.apache.org/core/4_8_0/core/org/apache/lucene/index/IndexWriterConfig.html#DEFAULT_RAM_BUFFER_SIZE_MB">DEFAULT_RAM_BUFFER_SIZE_MB</a>&nbsp;是16MB.</code></p>
+<p>&nbsp;</p>
+<p>setMaxBufferedDocs() 是设置，当IndexWriter添加的文档数量超过MaxBufferedDocs的时候，IndexWriter就会把内存中写入的文档，写到硬盘中，并生成一个新的索引文件segment。关于Lucene的索引结构会在下面说到。</p>
+<p>&nbsp;</p>
+<p>setMergePolicy 是设置索引合并的策略，MergePolicy中有一个参数DEFAULT_MAX_CFS_SEGMENT_SIZE 表示索引中最多有多少个segment文件。&nbsp;</p>
+<h4>1.1 提高索引的速度&nbsp;<code></code></h4>
+<p>上面提到了三个IndexWriterConfig的三个属性。我们知道，IndexWriter是当缓存中的容量达到一定的限制条件之后，才开始将缓存中的操作写入到硬盘中，事实上，如果我们把限制条件定的值越大，索引的速度是越快的。显而易见，如果设置RAMBufferSizeMB和MAXBufferedDocu越大，IndexWriter 写入硬盘的次数就越少，而写索引的时间耗费大多在对硬盘的操作之上。</p>
+<p>IndexWriter写入索引之后，在索引目录里会有很多segment文件。segment文件数量达到<strong>MergeFactor (设置合并因子)</strong>的时候，IndexWriter会将这些segment文件合并，形成一个新的segment文件，类似于压缩。而在索引目录中，如果segment文件越多，则搜索的速度会降低，segement文件越少，搜索的速度也就越快。所以当我们设置MergeFactor的值越大的时候，搜索的速度就会越快，而合并segement的速度则会降低，也即索引的速度会降低。</p>
+<p>&nbsp;</p>
+<h3>2. 索引文件的结构</h3>
+<p><img src="http://images2017.cnblogs.com/blog/948150/201801/948150-20180107164224549-619474334.png" alt="" /></p>
+<p>这是，一个索引目录下的索引文件。结构是这样的：</p>
+<h4>　　（索引）Index &nbsp;</h4>
+<h4>　　　　　---（段）Segment &nbsp;</h4>
+<h4>　　　　　　　---（文档）Document</h4>
+<h4>　　　　　　　　　 --- （域）Field</h4>
+<h4>　　　　　　　　　　　　--- （词）Term</h4>
+<p>上面的图片中，只有一个段，_v6.fdt ;_v6.fdx ....... 都属于_v6 segment中的内容。而segments_5u 和segments.gen 是段的元数据文件，也即它们保存了段的属性信息。</p>
+<ul>
+<li>XXX.fnm保存了此段包含了多少个域，每个域的名称及索引方式。</li>
+<li>XXX.fdx，XXX.fdt保存了此段包含的所有文档，每篇文档包含了多少域，每个域保存了那些信息。</li>
+<li>XXX.tvx，XXX.tvd，XXX.tvf保存了此段包含多少文档，每篇文档包含了多少域，每个域包含了多少词，每个词的字符串，位置等信息。</li>
+</ul>
+<p>上面的是正向信息，还有反向信息就不详细说了。</p>
+<p>&nbsp;</p>
+<h3>3.IndexWriter的优化　　</h3>
+<p><strong>在Lucene中IndexWriter.Optimize 用来优化索引，而在Lucene4.8.0中Optimize 已经更名为ForceMerge，为的是少让你使用。</strong>IndexWriter的优化实际上就是把Segment文件进行合并，你可以输入参数，ForceMerge(segments) 表示，合并到索引目录里最多有segments个段文件。而当参数越小的时候，也即合并的文件越多的时候，消耗的时间和空间就越大。很显然，合并是为了让我们的搜索速度变的更快。</p>
+<p>在优化的过程中，需要当前索引容量两倍的空间，比如你现在的索引大小是40个G，在优化过程中，索引的大小会增加到80多个G，然后再合并直到最后只有30多个G。当你的索引更新不是特别频繁的时候，可以优化一下，如果更新特别频繁，那么调用ForceMerge就会效率很低，这个时候，我们可以设置上面提到过的MergeFactor来，让索引中segments文件少一些。</p>
+<p>&nbsp;</p>
+<h3>4.IndexWriter的注意事项</h3>
+<p>1.IndexWriter在操作一个索引的时候会创建一个锁定文件,Writer.lock 。如果有另一个IndexWriter要打开这个目录，将会报错。</p>
+<p>2.IndexWriter实例是完全线程安全的，多个线程可以同时调用它的任何方法.</p>
+      <div class="cnblogs_code">
+<pre>IndexWriterConfig _indexWriterConfig = <span style="color: #0000ff;">new</span><span style="color: #000000;"> IndexWriterConfig(Lucene.Net.Util.LuceneVersion.LUCENE_48,analyze)
+IndexWriter _indexWriter </span>= <span style="color: #0000ff;">new</span> IndexWriter(dir,_indexWriterConfig)</pre>
+</div>
+<p>&nbsp;</p>

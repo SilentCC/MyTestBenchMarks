@@ -1,0 +1,21 @@
+﻿<Properties StartupConfiguration="{962191A0-11C5-4F3E-82E7-DA44F555140B}|Default">
+  <MonoDevelop.Ide.Workbench ActiveDocument="QuickSortBenchMarks/Program.cs">
+    <Files>
+      <File FileName="QuickSortBenchMarks/FilterCodeBlocks.cs" Line="46" Column="9" />
+      <File FileName="QuickSortBenchMarks/FilterCodeBlocksBenchmarks.cs" Line="75" Column="10" />
+      <File FileName="QuickSortBenchMarks/text.txt" Line="1" Column="27" />
+      <File FileName="QuickSortBenchMarks/ValueStringBuilder.cs" Line="227" Column="51" />
+      <File FileName="QuickSortBenchMarks/QuickSortBenchmark.cs" Line="1" Column="1" />
+      <File FileName="QuickSortBenchMarks/Program.cs" Line="12" Column="1" />
+    </Files>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.ItemProperties.MyTestBenchMarks PreferredExecutionTarget="MonoDevelop.Default" />
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore>
+      <Breakpoint file="/Users/xiaokang/Projects/QuickSortBenchMarks/QuickSortBenchMarks/Program.cs" relfile="QuickSortBenchMarks/Program.cs" line="12" column="32" />
+    </BreakpointStore>
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MultiItemStartupConfigurations />
+</Properties>
